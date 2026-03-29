@@ -1,0 +1,252 @@
+
+  const STORAGE_KEYS = { ELECTIONS: 'voting_elections', CANDIDATES: 'voting_candidates', VOTES: 'voting_votes', USERS: 'votingUsers' };
+  function getData(key) { const data = localStorage.getItem(key); return data ? JSON.parse(data) : []; }
+  function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+  let currentVoter = null;
+  let currentElectionForVote = null;
+  let selectedCandidateId = null;
+
+  function getCurrentVoter() { const user = sessionStorage.getItem('votingUser'); return user ? JSON.parse(user) : null; }
+  function hasVoted(electionId, voterAadhaar) { return getData(STORAGE_KEYS.VOTES).some(v => v.electionId === electionId && v.voterAadhaar === voterAadhaar); }
+  function castVote(electionId, candidateId) {
+    const voter = currentVoter;
+    if (!voter) return false;
+    if (hasVoted(electionId, voter.aadhaar)) { alert("You have already voted in this election."); return false; }
+    const votes = getData(STORAGE_KEYS.VOTES);
+    votes.push({ id: Date.now().toString(), electionId, candidateId, voterAadhaar: voter.aadhaar, timestamp: new Date().toISOString() });
+    saveData(STORAGE_KEYS.VOTES, votes);
+    return true;
+  }
+  function getElectionResults(electionId) {
+    const candidates = getData(STORAGE_KEYS.CANDIDATES).filter(c => c.electionId === electionId);
+    const votes = getData(STORAGE_KEYS.VOTES).filter(v => v.electionId === electionId);
+    return candidates.map(c => ({ ...c, voteCount: votes.filter(v => v.candidateId === c.id).length })).sort((a,b)=>b.voteCount - a.voteCount);
+  }
+
+  function ensureVoterSession() {
+    currentVoter = getCurrentVoter();
+    if (!currentVoter) { window.location.href = '/'; return false; }
+    if (currentVoter.role !== 'voter') { alert("Access denied. Only voters can view this page."); window.location.href = '/'; return false; }
+    document.getElementById('voterName').innerText = currentVoter.fullName;
+    const hour = new Date().getHours();
+    let greeting = "Good day";
+    if (hour < 12) greeting = "Good morning"; else if (hour < 18) greeting = "Good afternoon"; else greeting = "Good evening";
+    document.getElementById('greetingMessage').innerText = `${greeting},`;
+    const avatarImg = document.getElementById('avatarImg');
+    if (currentVoter.profilePicture) {
+      avatarImg.src = currentVoter.profilePicture;
+    } else {
+      const nameForAvatar = encodeURIComponent(currentVoter.fullName);
+      avatarImg.src = `https://ui-avatars.com/api/?background=2563eb&color=fff&rounded=true&bold=true&size=48&name=${nameForAvatar}&t=${Date.now()}`;
+    }
+    return true;
+  }
+
+  let currentSection = 'dashboard';
+
+  function renderDashboard() {
+    const elections = getData(STORAGE_KEYS.ELECTIONS);
+    const candidates = getData(STORAGE_KEYS.CANDIDATES);
+    const votes = getData(STORAGE_KEYS.VOTES);
+    const activeElections = elections.filter(e => e.status === 'active');
+    const upcomingElections = elections.filter(e => e.status === 'upcoming');
+    const completedElections = elections.filter(e => e.status === 'completed');
+    const userVotesCount = votes.filter(v => v.voterAadhaar === currentVoter.aadhaar).length;
+    const recentElections = [...elections].sort((a,b) => new Date(b.startDate) - new Date(a.startDate)).slice(0, 3);
+    const upcomingPreview = upcomingElections.slice(0, 3);
+
+    const html = `
+      <div class="stats-grid">
+        <div class="stat-card"><h3><i class="fas fa-vote-yea"></i> Active Elections</h3><div class="stat-number">${activeElections.length}</div></div>
+        <div class="stat-card"><h3><i class="fas fa-calendar-alt"></i> Upcoming</h3><div class="stat-number">${upcomingElections.length}</div></div>
+        <div class="stat-card"><h3><i class="fas fa-chart-line"></i> Completed</h3><div class="stat-number">${completedElections.length}</div></div>
+        <div class="stat-card"><h3><i class="fas fa-check-circle"></i> Your Votes</h3><div class="stat-number">${userVotesCount}</div></div>
+      </div>
+
+      ${upcomingPreview.length > 0 ? `
+        <div class="section">
+          <div class="section-header"><h2>Coming Soon</h2></div>
+          <div class="upcoming-preview">
+            ${upcomingPreview.map(e => `
+              <div class="upcoming-item">
+                <div>
+                  <div class="upcoming-title">${e.title}</div>
+                  <div class="upcoming-date">Starts: ${e.startDate}</div>
+                </div>
+                <span class="status-badge">Upcoming</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="section">
+        <div class="section-header"><h2>Recent Elections</h2></div>
+        <table>
+          <thead>
+            <tr><th>Title</th><th>Status</th><th>Dates</th></tr>
+          </thead>
+          <tbody>
+            ${recentElections.map(e => `
+              <tr>
+                <td><i class="fas fa-poll"></i> ${e.title}</td>
+                <td><span class="status-badge">${e.status}</span></td>
+                <td>${e.startDate} → ${e.endDate}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tips-card">
+        <h3><i class="fas fa-lightbulb"></i> Voting Tips</h3>
+        <p>✓ Verify your candidate's credentials before voting.</p>
+        <p>✓ Your vote is secret and cannot be changed after submission.</p>
+        <p>✓ You can only vote once per election.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><h2>Active Elections</h2></div>
+        <div id="activeElectionsList"></div>
+      </div>
+    `;
+    document.getElementById('dynamicContent').innerHTML = html;
+
+    // Render active elections as cards
+    const activeContainer = document.getElementById('activeElectionsList');
+    if (activeElections.length === 0) {
+      activeContainer.innerHTML = '<p>No active elections at the moment.</p>';
+    } else {
+      activeContainer.innerHTML = activeElections.map(election => {
+        const voterHasVoted = hasVoted(election.id, currentVoter.aadhaar);
+        return `
+          <div class="election-card">
+            <div class="election-title">${election.title}</div>
+            <div class="election-description">${election.description}</div>
+            <div class="election-dates"><i class="fas fa-calendar-alt"></i> ${election.startDate} → ${election.endDate}</div>
+            ${!voterHasVoted ? `<button class="vote-button" data-election-id="${election.id}" data-election-title="${election.title}" data-election-description="${election.description}">Let's Vote</button>` : `<div class="already-voted-badge"><i class="fas fa-check-circle"></i> You have already voted in this election</div>`}
+          </div>
+        `;
+      }).join('');
+
+      // Attach click handlers to "Let's Vote" buttons
+      document.querySelectorAll('.vote-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const electionId = btn.dataset.electionId;
+          const electionTitle = btn.dataset.electionTitle;
+          const electionDesc = btn.dataset.electionDescription;
+          openVoteModal(electionId, electionTitle, electionDesc);
+        });
+      });
+    }
+  }
+
+  function openVoteModal(electionId, title, description) {
+    currentElectionForVote = electionId;
+    selectedCandidateId = null;
+
+    const candidates = getData(STORAGE_KEYS.CANDIDATES).filter(c => c.electionId === electionId);
+    const modalTitle = document.getElementById('modalTitle');
+    modalTitle.innerHTML = `<i class="fas fa-vote-yea"></i> ${title}`;
+    const modalCandidatesDiv = document.getElementById('modalCandidates');
+    modalCandidatesDiv.innerHTML = `
+      <p style="margin-bottom: 16px;">${description}</p>
+      <div class="candidates-grid" id="candidatesGrid">
+        ${candidates.map(c => `
+          <div class="candidate-card" data-candidate-id="${c.id}">
+            ${c.partySymbolImageUrl ? `<img src="${c.partySymbolImageUrl}" class="candidate-img" alt="symbol">` : ''}
+            <div class="candidate-name">${c.name}</div>
+            <div class="candidate-party">${c.party}</div>
+            <div class="candidate-bio">${c.bio || ''}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Add click handlers to candidate cards
+    document.querySelectorAll('.candidate-card').forEach(card => {
+      card.addEventListener('click', () => {
+        // Remove selected class from all
+        document.querySelectorAll('.candidate-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedCandidateId = card.dataset.candidateId;
+      });
+    });
+
+    document.getElementById('voteModal').style.display = 'flex';
+  }
+
+  function closeVoteModal() {
+    document.getElementById('voteModal').style.display = 'none';
+    currentElectionForVote = null;
+    selectedCandidateId = null;
+  }
+
+  function confirmVote() {
+    if (!selectedCandidateId) {
+      alert('Please select a candidate to vote for.');
+      return;
+    }
+    if (confirm('Are you sure you want to cast your vote for this candidate? This action cannot be undone.')) {
+      if (castVote(currentElectionForVote, selectedCandidateId)) {
+        alert('Vote cast successfully!');
+        closeVoteModal();
+        renderDashboard(); // refresh dashboard
+      } else {
+        alert('Failed to cast vote. You may have already voted in this election.');
+        closeVoteModal();
+        renderDashboard();
+      }
+    }
+  }
+
+  function renderUpcoming() {
+    const elections = getData(STORAGE_KEYS.ELECTIONS), upcoming = elections.filter(e => e.status === 'upcoming');
+    const html = `<div class="section"><div class="section-header"><h2>Upcoming Elections</h2></div>${upcoming.length === 0 ? '<p>No upcoming elections scheduled.</p>' : upcoming.map(e => `<div style="margin-bottom: 24px; border-left: 4px solid #2563eb; padding-left: 16px;"><h3>${e.title}</h3><p>${e.description}</p><p><strong>Start Date:</strong> ${e.startDate} | <strong>End Date:</strong> ${e.endDate}</p></div>`).join('')}</div>`;
+    document.getElementById('dynamicContent').innerHTML = html;
+  }
+
+  function renderResults() {
+    const elections = getData(STORAGE_KEYS.ELECTIONS), completed = elections.filter(e => e.status === 'completed');
+    const html = `<div class="section"><div class="section-header"><h2>Election Results</h2></div>${completed.length === 0 ? '<p>No completed elections yet.</p>' : completed.map(election => { const results = getElectionResults(election.id); const winner = results[0]; return `<div style="margin-bottom: 32px;"><h3>${election.title}</h3><p style="margin-bottom: 12px;">${election.description}</p><div class="candidates-grid">${results.map(c => `<div class="candidate-card">${c.partySymbolImageUrl ? `<img src="${c.partySymbolImageUrl}" class="candidate-img" alt="symbol">` : ''}<div class="candidate-name">${c.name}</div><div class="candidate-party">${c.party}</div><div><strong>Votes:</strong> ${c.voteCount}</div>${winner && winner.id === c.id ? '<div class="winner-badge"><i class="fas fa-trophy"></i> Winner</div>' : ''}</div>`).join('')}</div></div>`; }).join('')}</div>`;
+    document.getElementById('dynamicContent').innerHTML = html;
+  }
+
+  function loadSection(section) {
+    currentSection = section;
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.section === section));
+    if (section === 'dashboard') renderDashboard();
+    else if (section === 'active') renderDashboard(); // same as dashboard for now
+    else if (section === 'upcoming') renderUpcoming();
+    else if (section === 'results') renderResults();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!ensureVoterSession()) return;
+    loadSection('dashboard');
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        loadSection(item.dataset.section);
+        if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+      });
+    });
+
+    const sidebar = document.getElementById('sidebar'), menuToggle = document.getElementById('menuToggle');
+    menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+    document.addEventListener('click', (e) => {
+      if (!sidebar.contains(e.target) && !menuToggle.contains(e.target) && window.innerWidth <= 768) sidebar.classList.remove('open');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      sessionStorage.removeItem('votingUser');
+      window.location.href = '/';
+    });
+
+    // Modal close handlers
+    document.getElementById('closeModalBtn').addEventListener('click', closeVoteModal);
+    document.getElementById('confirmVoteBtn').addEventListener('click', confirmVote);
+    document.getElementById('voteModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('voteModal')) closeVoteModal();
+    });
+  });

@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>My Profile - Online Voting System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+  
+</head>
+<body>
+<div class="container">
+  <h1><i class="fas fa-user-circle"></i> My Profile</h1>
+  <div class="subtitle">Manage your personal information and security</div>
+
+  <!-- Profile Picture -->
+  <div class="section">
+    <h2><i class="fas fa-camera"></i> Profile Picture</h2>
+    <div class="profile-preview">
+      <img id="avatarPreview" class="current-avatar" alt="Profile" src="">
+      <div>
+        <label for="profilePictureUpload" class="file-input-label"><i class="fas fa-upload"></i> Upload New Picture</label>
+        <input type="file" id="profilePictureUpload" accept="image/*">
+        <div id="profilePicStatus" class="status-text"></div>
+      </div>
+    </div>
+    <button id="updatePictureBtn" class="btn btn-primary" style="margin-top: 8px;">Update Picture</button>
+  </div>
+
+  <!-- User Info (read‑only) -->
+  <div class="section">
+    <h2><i class="fas fa-id-card"></i> Account Information</h2>
+    <div class="form-group">
+      <label>Aadhaar Number</label>
+      <div class="readonly-field" id="aadhaarDisplay">-</div>
+    </div>
+    <div class="form-group">
+      <label>Role</label>
+      <div class="readonly-field" id="roleDisplay">-</div>
+    </div>
+  </div>
+
+  <!-- Editable Profile -->
+  <div class="section">
+    <h2><i class="fas fa-edit"></i> Edit Profile</h2>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="fullName" placeholder="Your full name">
+    </div>
+    <div class="form-group">
+      <label>Mobile Number</label>
+      <input type="tel" id="mobile" placeholder="10-digit mobile">
+      <div class="otp-actions" style="margin-top: 8px;">
+        <button id="sendOtpBtn" class="btn btn-outline btn-sm">Send OTP</button>
+        <span id="otpTimer" class="small-hint" style="font-size:0.8rem;"></span>
+      </div>
+      <div id="otpSection" style="display: none;">
+        <div class="otp-row">
+          <input type="number" class="otp-input" maxlength="1" />
+          <input type="number" class="otp-input" maxlength="1" />
+          <input type="number" class="otp-input" maxlength="1" />
+          <input type="number" class="otp-input" maxlength="1" />
+          <input type="number" class="otp-input" maxlength="1" />
+          <input type="number" class="otp-input" maxlength="1" />
+        </div>
+        <div id="otpStatus" class="status-text"></div>
+      </div>
+    </div>
+    <button id="saveProfileBtn" class="btn btn-primary">Save Changes</button>
+  </div>
+
+  <!-- Password Management -->
+  <div class="section">
+    <h2><i class="fas fa-lock"></i> Password Management</h2>
+    <div id="passwordForm">
+      <!-- Dynamic content: set password or change password -->
+    </div>
+  </div>
+
+  <div class="back-link">
+    <a href="#" id="backToDashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+  </div>
+</div>
+<script src="{% static 'js/profile.js' %}"></script>
+</body>
+</html>
