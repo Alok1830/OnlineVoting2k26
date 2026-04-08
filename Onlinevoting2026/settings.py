@@ -30,6 +30,8 @@ ALLOWED_HOSTS = [
     '*.vercel.app',
     'localhost',
     '127.0.0.1',
+    "online-voting2k26-6lr3anzll-alok1830s-projects.vercel.app",
+    "online-voting2k26.vercel.app",
 ]
 
 
