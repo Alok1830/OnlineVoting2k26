@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>OVS-SRGI | Modern Digital Voting Platform</title>
+  <!-- Google Fonts & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/landing_page.css' %}">
+</head>
+<body>
+<div class="bg-orb orb-1"></div>
+<div class="bg-orb orb-2"></div>
+
+<div class="container">
+  <nav class="navbar">
+    <div class="logo"><i class="fas fa-vote-yea"></i><h1>OVS-SRGI</h1></div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="{% url 'login' %}" class="btn-outline-nav"><i class="fas fa-key"></i> Login</a>
+      <a href="{% url 'registration' %}" class="btn-solid-nav"><i class="fas fa-user-plus"></i> Register</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-badge"><i class="fas fa-shield-alt"></i> Secure • Transparent • Instant</div>
+      <h1>Your voice, <br>digitally secured.</h1>
+      <p>Aadhaar‑verified OTP login, end‑to‑end encrypted votes, and real‑time results — redefining democracy for the digital era.</p>
+      <div class="hero-buttons">
+        <a href="{% url 'registration' %}" class="btn-primary"><i class="fas fa-rocket"></i> Get started</a>
+        <a href="#features" class="btn-secondary"><i class="fas fa-arrow-down"></i> Explore</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <i class="fas fa-vote-yea floating-icon"></i>
+      <p style="margin-top: 16px; font-weight: 500;">100% tamper-proof • Blockchain-inspired</p>
+    </div>
+  </div>
+
+  <!-- dynamic stats -->
+  <div class="stats-row" id="statsContainer">
+    <div class="stat-item"><div class="stat-number" id="totalVoters">0</div><div class="stat-label"><i class="fas fa-users"></i> Registered Voters</div></div>
+    <div class="stat-item"><div class="stat-number" id="totalElections">0</div><div class="stat-label"><i class="fas fa-poll"></i> Elections Held</div></div>
+    <div class="stat-item"><div class="stat-number" id="totalVotes">0</div><div class="stat-label"><i class="fas fa-check-double"></i> Votes Cast</div></div>
+    <div class="stat-item"><div class="stat-number" id="activeElectionsCount">0</div><div class="stat-label"><i class="fas fa-play-circle"></i> Active Elections</div></div>
+  </div>
+
+  <div id="features">
+    <h2 class="section-title">Why OVS-SRGI ?</h2>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon"><i class="fas fa-fingerprint"></i></div><h3>Aadhaar OTP Auth</h3><p>12-digit Aadhaar + one-time password ensures only eligible voters participate.</p></div>
+      <div class="feature-card"><div class="feature-icon"><i class="fas fa-database"></i></div><h3>Immutable Ledger</h3><p>Votes are securely stored and cannot be altered after casting.</p></div>
+      <div class="feature-card"><div class="feature-icon"><i class="fas fa-chart-line"></i></div><h3>Live Results</h3><p>Real-time counting and transparent result dashboards.</p></div>
+      <div class="feature-card"><div class="feature-icon"><i class="fas fa-user-shield"></i></div><h3>Role Management</h3><p>Separate admin & voter portals with granular access control.</p></div>
+      <div class="feature-card"><div class="feature-icon"><i class="fas fa-mobile-alt"></i></div><h3>Fully Responsive</h3><p>Seamless voting experience on desktop, tablet, and mobile.</p></div>
+      <div class="feature-card"><div class="feature-icon"><i class="fas fa-history"></i></div><h3>Voter History</h3><p>Track your past votes and election participation securely.</p></div>
+    </div>
+  </div>
+
+  <!-- Active elections live preview -->
+  <div class="elections-preview">
+    <h3 style="font-size: 1.7rem; margin-bottom: 8px;"><i class="fas fa-bolt"></i> Live elections</h3>
+    <p style="margin-bottom: 28px; color: #2c3e5c;">Participate now and make an impact.</p>
+    <div id="activeElectionsList"></div>
+    <div style="text-align: center; margin-top: 28px;">
+      <a href="{% url 'login' %}" class="btn-primary" style="background: #1e4a8a;"><i class="fas fa-sign-in-alt"></i> Login to vote</a>
+    </div>
+  </div>
+
+  <div id="how-it-works">
+    <h2 class="section-title">Simple, fast & secure</h2>
+    <div class="steps">
+      <div class="step"><div class="step-number">1</div><h4>Register</h4><p>Provide Aadhaar, mobile & name → OTP verification.</p></div>
+      <div class="step"><div class="step-number">2</div><h4>Explore Elections</h4><p>See active polls, candidates, and manifestos.</p></div>
+      <div class="step"><div class="step-number">3</div><h4>Cast your vote</h4><p>One person, one vote — encrypted and irreversible.</p></div>
+      <div class="step"><div class="step-number">4</div><h4>Track results</h4><p>View live stats and final outcomes in real time.</p></div>
+    </div>
+  </div>
+
+  <div class="cta-section">
+    <h2>Ready to shape the future?</h2>
+    <p>Join thousands of citizens who already trust OVS-SRGI for fair and transparent digital elections.</p>
+    <div class="cta-buttons">
+      <a href="{% url 'registration' %}" class="btn-light"><i class="fas fa-user-check"></i> Create account</a>
+      <a href="{% url 'login' %}" class="btn-outline-light"><i class="fas fa-arrow-right"></i> Sign in</a>
+    </div>
+  </div>
+
+  <!-- Our Project Team Section with Images -->
+  <div class="team-section">
+    <h2 class="section-title">Our Project Team</h2>
+    <div class="team-grid">
+      <!-- Aditya Dubey -->
+      <div class="team-card">
+        <img class="team-avatar-img" src="https://ui-avatars.com/api/?name=Aditya+Dubey&background=1e4a8a&color=fff&rounded=true&size=100&bold=true" alt="Aditya Dubey">
+        <div class="team-name">Aditya Dubey</div>
+        <div class="team-role">Lead Developer</div>
+        <button class="view-btn" data-member="Aditya Dubey" data-role="Lead Developer" data-bio="Full-stack architect, voting system core logic.">View</button>
+      </div>
+      <!-- Sonu Patel -->
+      <div class="team-card">
+        <img class="team-avatar-img" src="https://ui-avatars.com/api/?name=Sonu+Patel&background=1e4a8a&color=fff&rounded=true&size=100&bold=true" alt="Sonu Patel">
+        <div class="team-name">Sonu Patel</div>
+        <div class="team-role">Frontend & UI Designer</div>
+        <button class="view-btn" data-member="Sonu Patel" data-role="Frontend & UI Designer" data-bio="Responsive interfaces, modern glassmorphic designs.">View</button>
+      </div>
+      <!-- Alok Vikram (Frontend Developer) -->
+      <div class="team-card">
+        <img class="team-avatar-img" src="https://ui-avatars.com/api/?name=Alok+Vikram&background=1e4a8a&color=fff&rounded=true&size=100&bold=true" alt="Alok Vikram">
+        <div class="team-name">Alok Vikram</div>
+        <div class="team-role">Frontend Developer</div>
+        <button class="view-btn" data-member="Alok Vikram" data-role="Frontend Developer" data-bio="UI implementation, component architecture, interactive features.">View</button>
+      </div>
+      <!-- Ashutosh Shakya (Backend & Security) -->
+      <div class="team-card">
+        <img class="team-avatar-img" src="https://ui-avatars.com/api/?name=Ashutosh+Shakya&background=1e4a8a&color=fff&rounded=true&size=100&bold=true" alt="Ashutosh Shakya">
+        <div class="team-name">Ashutosh Shakya</div>
+        <div class="team-role">Backend & Security</div>
+        <button class="view-btn" data-member="Ashutosh Shakya" data-role="Backend & Security" data-bio="Data integrity, OTP verification, localStorage architecture, security protocols.">View</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Support</a>
+    </div>
+    <p><i class="fas fa-vote-yea"></i> OVS-SRGI — Modern Online Voting System | © 2025</p>
+  </footer>
+
+<script src="{% static 'js/landing_page.js' %}"></script>
+</div>
+</body>
+</html>
