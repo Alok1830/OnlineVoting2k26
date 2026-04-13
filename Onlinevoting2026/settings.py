@@ -11,8 +11,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-from decouple import config, Csv
 import os
+
+# Try to load environment variables from .env file
+try:
+    from decouple import config, Csv
+    HAS_DECOUPLE = True
+except ImportError:
+    HAS_DECOUPLE = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,12 +28,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-^^y=(*n0@qd78aj2wwy41j#3)g%kc3q^!$*s_gq0d%3i8)5lka')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
-
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+if HAS_DECOUPLE:
+    SECRET_KEY = config('SECRET_KEY', default='django-insecure-^^y=(*n0@qd78aj2wwy41j#3)g%kc3q^!$*s_gq0d%3i8)5lka')
+    DEBUG = config('DEBUG', default=True, cast=bool)
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+else:
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-^^y=(*n0@qd78aj2wwy41j#3)g%kc3q^!$*s_gq0d%3i8)5lka')
+    DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 if not DEBUG:
     ALLOWED_HOSTS = ['*']  # Render will handle security
 
@@ -162,9 +170,14 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Twilio SMS Configuration
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
-TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
+if HAS_DECOUPLE:
+    TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+    TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+    TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
+else:
+    TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+    TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+    TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')
 
 # Logging Configuration
 LOGGING = {

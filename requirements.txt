@@ -1,7 +1,14 @@
 asgiref==3.9.2
 colorama==0.4.6
 django==5.2.6
+django-cors-headers==4.9.0
+djangorestframework==3.17.1
 pillow==11.3.0
 qrcode==8.2
 sqlparse==0.5.3
 tzdata==2025.2
+gunicorn==23.0.0
+PyJWT==2.12.1
+twilio==9.1.1
+python-decouple==3.8
+whitenoise==6.6.0
