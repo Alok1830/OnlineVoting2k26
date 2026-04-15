@@ -50,16 +50,46 @@
       return true;
     }
 
-    getOtpBtn.addEventListener("click", () => {
+    getOtpBtn.addEventListener("click", async () => {
       if (!validateFields()) return;
-      generateOtp();
-      startTimer(30);
-      otpStatus.style.display = "none";
-      otpStatus.classList.remove("error");
-      isOtpVerified = false;
-      registerBtn.disabled = true;
-      otpInputs.forEach(input => input.value = "");
-      otpInputs[0].focus();
+      
+      const aadhaar = aadhaarInput.value.trim();
+      const mobile = mobileInput.value.trim();
+      getOtpBtn.disabled = true;
+      getOtpBtn.textContent = "Sending...";
+      
+      try {
+        const response = await fetch('/api/request-registration-otp/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aadhaar, mobile })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          generatedOtp = data.otp_code;
+          console.log("OTP from backend:", generatedOtp);
+          alert("OTP (test): " + generatedOtp + "\n\nOTP sent to your phone!");
+          startTimer(30);
+          otpStatus.style.display = "none";
+          otpStatus.classList.remove("error");
+          isOtpVerified = false;
+          registerBtn.disabled = true;
+          otpInputs.forEach(input => input.value = "");
+          otpInputs[0].focus();
+          getOtpBtn.textContent = "Get OTP";
+          getOtpBtn.disabled = false;
+        } else {
+          alert(data.error || "Failed to request OTP");
+          getOtpBtn.disabled = false;
+          getOtpBtn.textContent = "Get OTP";
+        }
+      } catch (error) {
+        alert("Error: " + error.message);
+        getOtpBtn.disabled = false;
+        getOtpBtn.textContent = "Get OTP";
+      }
     });
 
     otpInputs.forEach((input, index) => {
@@ -97,27 +127,53 @@
       }
     }
 
-    registerBtn.addEventListener("click", () => {
+    registerBtn.addEventListener("click", async () => {
       if (!isOtpVerified) {
         alert("Please verify OTP first.");
         return;
       }
+      
       const fullName = fullNameInput.value.trim();
       const aadhaar = aadhaarInput.value.trim();
       const mobile = mobileInput.value.trim();
       const role = roleSelect.value;
-
-      const user = { fullName, aadhaar, mobile, role, registeredAt: new Date().toISOString() };
-      let users = JSON.parse(localStorage.getItem("votingUsers")) || [];
-      if (users.find(u => u.aadhaar === user.aadhaar)) {
-        alert("Aadhaar already registered. Please login.");
-        return;
+      const otp_code = Array.from(otpInputs).map(input => input.value).join("");
+      
+      registerBtn.disabled = true;
+      registerBtn.textContent = "Registering...";
+      
+      try {
+        const response = await fetch('/api/register/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            aadhaar,
+            full_name: fullName,
+            mobile,
+            email: `${aadhaar}@voting.app`,
+            role,
+            otp_code
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Store voter info in sessionStorage
+          sessionStorage.setItem('votingUser', JSON.stringify(data));
+          greetingMessageSpan.textContent = `Welcome, ${fullName}! You have registered as ${role.toUpperCase()}. Your account is ready.`;
+          successModal.style.display = "flex";
+          registerBtn.textContent = "Register";
+        } else {
+          alert(data.error || data.aadhaar?.[0] || "Registration failed");
+          registerBtn.disabled = false;
+          registerBtn.textContent = "Register";
+        }
+      } catch (error) {
+        alert("Registration error: " + error.message);
+        registerBtn.disabled = false;
+        registerBtn.textContent = "Register";
       }
-      users.push(user);
-      localStorage.setItem("votingUsers", JSON.stringify(users));
-
-      greetingMessageSpan.textContent = `Welcome, ${fullName}! You have registered as ${role.toUpperCase()}. Your account is ready.`;
-      successModal.style.display = "flex";
     });
 
     successModal.addEventListener("click", (e) => {
