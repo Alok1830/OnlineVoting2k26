@@ -5,38 +5,98 @@
   let currentVoter = null;
   let currentElectionForVote = null;
   let selectedCandidateId = null;
+  let allElections = [];
+  let allCandidates = [];
 
   function getCurrentVoter() { const user = sessionStorage.getItem('votingUser'); return user ? JSON.parse(user) : null; }
+  
+  async function fetchElections() {
+    try {
+      const response = await fetch('/api/elections/');
+      if (response.ok) {
+        allElections = await response.json();
+        return allElections;
+      }
+    } catch (error) {
+      console.error('Error fetching elections:', error);
+    }
+    return [];
+  }
+  
+  async function fetchCandidates() {
+    try {
+      const response = await fetch('/api/candidates/');
+      if (response.ok) {
+        allCandidates = await response.json();
+        return allCandidates;
+      }
+    } catch (error) {
+      console.error('Error fetching candidates:', error);
+    }
+    return [];
+  }
+  
   function hasVoted(electionId, voterAadhaar) { return getData(STORAGE_KEYS.VOTES).some(v => v.electionId === electionId && v.voterAadhaar === voterAadhaar); }
-  function castVote(electionId, candidateId) {
+  
+  async function castVote(electionId, candidateId) {
     const voter = currentVoter;
     if (!voter) return false;
     if (hasVoted(electionId, voter.aadhaar)) { alert("You have already voted in this election."); return false; }
-    const votes = getData(STORAGE_KEYS.VOTES);
-    votes.push({ id: Date.now().toString(), electionId, candidateId, voterAadhaar: voter.aadhaar, timestamp: new Date().toISOString() });
-    saveData(STORAGE_KEYS.VOTES, votes);
-    return true;
+    
+    try {
+      const response = await fetch('/api/votes/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          election: electionId,
+          candidate: candidateId,
+          voter_aadhaar: voter.aadhaar
+        })
+      });
+      
+      if (response.ok) {
+        const votes = getData(STORAGE_KEYS.VOTES);
+        votes.push({ id: Date.now().toString(), electionId, candidateId, voterAadhaar: voter.aadhaar, timestamp: new Date().toISOString() });
+        saveData(STORAGE_KEYS.VOTES, votes);
+        return true;
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to cast vote');
+        return false;
+      }
+    } catch (error) {
+      alert('Error casting vote: ' + error.message);
+      return false;
+    }
   }
-  function getElectionResults(electionId) {
-    const candidates = getData(STORAGE_KEYS.CANDIDATES).filter(c => c.electionId === electionId);
-    const votes = getData(STORAGE_KEYS.VOTES).filter(v => v.electionId === electionId);
-    return candidates.map(c => ({ ...c, voteCount: votes.filter(v => v.candidateId === c.id).length })).sort((a,b)=>b.voteCount - a.voteCount);
+  
+  async function getElectionResults(electionId) {
+    try {
+      const response = await fetch(`/api/elections/${electionId}/results/`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.results;
+      }
+    } catch (error) {
+      console.error('Error fetching results:', error);
+    }
+    return [];
   }
 
   function ensureVoterSession() {
     currentVoter = getCurrentVoter();
     if (!currentVoter) { window.location.href = '/'; return false; }
     if (currentVoter.role !== 'voter') { alert("Access denied. Only voters can view this page."); window.location.href = '/'; return false; }
-    document.getElementById('voterName').innerText = currentVoter.fullName;
+    document.getElementById('voterName').innerText = currentVoter.full_name;
     const hour = new Date().getHours();
     let greeting = "Good day";
     if (hour < 12) greeting = "Good morning"; else if (hour < 18) greeting = "Good afternoon"; else greeting = "Good evening";
     document.getElementById('greetingMessage').innerText = `${greeting},`;
     const avatarImg = document.getElementById('avatarImg');
-    if (currentVoter.profilePicture) {
-      avatarImg.src = currentVoter.profilePicture;
+    if (currentVoter.profile_picture) {
+      avatarImg.src = currentVoter.profile_picture;
     } else {
-      const nameForAvatar = encodeURIComponent(currentVoter.fullName);
+      const nameForAvatar = encodeURIComponent(currentVoter.full_name);
       avatarImg.src = `https://ui-avatars.com/api/?background=2563eb&color=fff&rounded=true&bold=true&size=48&name=${nameForAvatar}&t=${Date.now()}`;
     }
     return true;
@@ -44,15 +104,14 @@
 
   let currentSection = 'dashboard';
 
-  function renderDashboard() {
-    const elections = getData(STORAGE_KEYS.ELECTIONS);
-    const candidates = getData(STORAGE_KEYS.CANDIDATES);
+  async function renderDashboard() {
+    const elections = await fetchElections();
     const votes = getData(STORAGE_KEYS.VOTES);
     const activeElections = elections.filter(e => e.status === 'active');
     const upcomingElections = elections.filter(e => e.status === 'upcoming');
     const completedElections = elections.filter(e => e.status === 'completed');
     const userVotesCount = votes.filter(v => v.voterAadhaar === currentVoter.aadhaar).length;
-    const recentElections = [...elections].sort((a,b) => new Date(b.startDate) - new Date(a.startDate)).slice(0, 3);
+    const recentElections = [...elections].sort((a,b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 3);
     const upcomingPreview = upcomingElections.slice(0, 3);
 
     const html = `
@@ -71,7 +130,7 @@
               <div class="upcoming-item">
                 <div>
                   <div class="upcoming-title">${e.title}</div>
-                  <div class="upcoming-date">Starts: ${e.startDate}</div>
+                  <div class="upcoming-date">Starts: ${e.start_date}</div>
                 </div>
                 <span class="status-badge">Upcoming</span>
               </div>
@@ -91,7 +150,7 @@
               <tr>
                 <td><i class="fas fa-poll"></i> ${e.title}</td>
                 <td><span class="status-badge">${e.status}</span></td>
-                <td>${e.startDate} → ${e.endDate}</td>
+                <td>${e.start_date} → ${e.end_date}</td>
               </tr>
             `).join('')}
           </tbody>

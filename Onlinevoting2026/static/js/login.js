@@ -38,24 +38,47 @@
       alert("Demo OTP (for testing): " + generatedOtp);
     }
 
-    getOtpBtn.addEventListener("click", () => {
+    getOtpBtn.addEventListener("click", async () => {
       const aadhaar = aadhaarInput.value.trim();
       if (!aadhaar || aadhaar.length !== 12) {
         alert("Please enter a valid 12-digit Aadhaar number.");
         return;
       }
-      const user = getUserByAadhaar(aadhaar);
-      if (!user) {
-        alert("Aadhaar not registered. Please register first.");
-        return;
+      
+      getOtpBtn.disabled = true;
+      getOtpBtn.textContent = "Sending...";
+      
+      try {
+        const response = await fetch('/api/request-otp/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aadhaar })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          generatedOtp = data.otp_code;
+          console.log("OTP from backend:", generatedOtp);
+          alert("OTP (test): " + generatedOtp);
+          startTimer(30);
+          otpStatus.style.display = "none";
+          otpStatus.classList.remove("error");
+          loginBtn.disabled = true;
+          otpInputs.forEach(input => input.value = "");
+          otpInputs[0].focus();
+          getOtpBtn.textContent = "Get OTP";
+          getOtpBtn.disabled = false;
+        } else {
+          alert(data.error || "Failed to request OTP. Please register first.");
+          getOtpBtn.disabled = false;
+          getOtpBtn.textContent = "Get OTP";
+        }
+      } catch (error) {
+        alert("Error: " + error.message);
+        getOtpBtn.disabled = false;
+        getOtpBtn.textContent = "Get OTP";
       }
-      generateOtp();
-      startTimer(30);
-      otpStatus.style.display = "none";
-      otpStatus.classList.remove("error");
-      loginBtn.disabled = true;
-      otpInputs.forEach(input => input.value = "");
-      otpInputs[0].focus();
     });
 
     otpInputs.forEach((input, index) => {
@@ -90,24 +113,51 @@
       }
     }
 
-    loginBtn.addEventListener("click", () => {
+    loginBtn.addEventListener("click", async () => {
       const aadhaar = aadhaarInput.value.trim();
-      let user = getUserByAadhaar(aadhaar);
-      if (!user) {
-        alert("User not found. Please register.");
+      const otp_code = Array.from(otpInputs).map(input => input.value).join("");
+      
+      if (!aadhaar || otp_code.length !== 6) {
+        alert("Please enter valid Aadhaar and OTP.");
         return;
       }
-      // Fallback if role is missing
-      if (!user.role) {
-        console.warn("User missing role, defaulting to 'voter'");
-        user.role = "voter";
-      }
-      sessionStorage.setItem("votingUser", JSON.stringify(user));
-      if (user.role === "admin") {
-        window.location.href = "/admin_panel/";
-      } else if (user.role === "voter") {
-        window.location.href = "/voter_panel/";
-      } else {
-        alert(`Unknown role: "${user.role}". Please contact support.`);
+      
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Logging in...";
+      
+      try {
+        const response = await fetch('/api/login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aadhaar, otp_code })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Store token and voter info
+          sessionStorage.setItem('votingToken', data.token);
+          sessionStorage.setItem('votingUser', JSON.stringify(data.voter));
+          
+          // Redirect based on role
+          const role = data.voter.role;
+          if (role === 'admin') {
+            window.location.href = '/admin_panel/';
+          } else if (role === 'voter') {
+            window.location.href = '/voter_panel/';
+          } else {
+            alert('Unknown role. Please contact support.');
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login';
+          }
+        } else {
+          alert(data.error || 'Login failed');
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Login';
+        }
+      } catch (error) {
+        alert("Login error: " + error.message);
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
       }
     });
