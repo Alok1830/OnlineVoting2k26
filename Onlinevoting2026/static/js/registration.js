@@ -12,7 +12,6 @@
     const greetingMessageSpan = document.getElementById("greetingMessage");
     const loginNowBtn = document.getElementById("loginNowBtn");
 
-    let generatedOtp = "";
     let timerInterval = null;
     let isOtpVerified = false;
 
@@ -31,13 +30,6 @@
           otpTimer.textContent = "Resend OTP in " + remaining + "s";
         }
       }, 1000);
-    }
-
-    function generateOtp() {
-      generatedOtp = "";
-      for (let i = 0; i < 6; i++) generatedOtp += Math.floor(Math.random() * 10);
-      console.log("Demo OTP:", generatedOtp);
-      alert("Demo OTP (for testing): " + generatedOtp);
     }
 
     function validateFields() {
@@ -68,9 +60,7 @@
         const data = await response.json();
         
         if (response.ok) {
-          generatedOtp = data.otp_code;
-          console.log("OTP from backend:", generatedOtp);
-          alert("OTP (test): " + generatedOtp + "\n\nOTP sent to your phone!");
+          alert(data.message || "OTP sent to your mobile number.");
           startTimer(30);
           otpStatus.style.display = "none";
           otpStatus.classList.remove("error");
@@ -107,19 +97,11 @@
     function checkOtp() {
       const entered = Array.from(otpInputs).map(input => input.value).join("");
       if (entered.length === 6) {
-        if (entered === generatedOtp) {
-          otpStatus.textContent = "OTP verified";
-          otpStatus.classList.remove("error");
-          otpStatus.style.display = "block";
-          isOtpVerified = true;
-          registerBtn.disabled = false;
-        } else {
-          otpStatus.textContent = "Incorrect OTP. Please try again.";
-          otpStatus.classList.add("error");
-          otpStatus.style.display = "block";
-          isOtpVerified = false;
-          registerBtn.disabled = true;
-        }
+        otpStatus.textContent = "OTP entered. Click Register to verify.";
+        otpStatus.classList.remove("error");
+        otpStatus.style.display = "block";
+        isOtpVerified = true;
+        registerBtn.disabled = false;
       } else {
         otpStatus.style.display = "none";
         isOtpVerified = false;

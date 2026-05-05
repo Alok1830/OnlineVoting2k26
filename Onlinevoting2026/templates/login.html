@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Online Voting System - Aadhaar Login</title>
+  <title>Online Voting System - Mobile OTP Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="{% static 'css/login.css' %}">
 
@@ -12,9 +12,9 @@
   <div class="card">
     <h2>Login</h2>
     <div class="input-group">
-      <label for="aadhaar">Aadhaar Number</label>
-      <input type="number" id="aadhaar" placeholder="Enter your Aadhaar (12 digits)" />
-      <div class="small-hint">OTP will be sent to the mobile number linked with your Aadhaar.</div>
+      <label for="mobile">Registered Mobile Number</label>
+      <input type="tel" id="mobile" placeholder="Enter your registered mobile (10 digits)" />
+      <div class="small-hint">OTP will be sent only to this registered mobile number.</div>
     </div>
     <div class="otp-actions">
       <button id="getOtpBtn" class="btn-outline">Send OTP</button>
@@ -35,6 +35,9 @@
     <button id="loginBtn" class="btn-primary" disabled>Login</button>
     <div class="footer-text">
       New user? <a href="{% url 'registration' %}">Register</a>
+    </div>
+    <div class="footer-text" style="margin-top: 8px;">
+      <a href="{% url 'admin_login_page' %}">Admin Login</a>
     </div>
   </div>
   <script src="{% static 'js/login.js' %}"></script>

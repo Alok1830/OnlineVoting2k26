@@ -4,15 +4,9 @@
     const otpStatus = document.getElementById("otpStatus");
     const loginBtn = document.getElementById("loginBtn");
     const otpTimer = document.getElementById("otpTimer");
-    const aadhaarInput = document.getElementById("aadhaar");
+    const mobileInput = document.getElementById("mobile");
 
-    let generatedOtp = "";
     let timerInterval = null;
-
-    function getUserByAadhaar(aadhaar) {
-      const users = JSON.parse(localStorage.getItem("votingUsers")) || [];
-      return users.find(user => user.aadhaar === aadhaar);
-    }
 
     function startTimer(seconds) {
       let remaining = seconds;
@@ -31,17 +25,10 @@
       }, 1000);
     }
 
-    function generateOtp() {
-      generatedOtp = "";
-      for (let i = 0; i < 6; i++) generatedOtp += Math.floor(Math.random() * 10);
-      console.log("Demo OTP:", generatedOtp);
-      alert("Demo OTP (for testing): " + generatedOtp);
-    }
-
     getOtpBtn.addEventListener("click", async () => {
-      const aadhaar = aadhaarInput.value.trim();
-      if (!aadhaar || aadhaar.length !== 12) {
-        alert("Please enter a valid 12-digit Aadhaar number.");
+      const mobile = mobileInput.value.trim();
+      if (!mobile || mobile.length !== 10 || isNaN(mobile)) {
+        alert("Please enter a valid 10-digit registered mobile number.");
         return;
       }
       
@@ -52,15 +39,13 @@
         const response = await fetch('/api/request-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aadhaar })
+          body: JSON.stringify({ mobile })
         });
         
         const data = await response.json();
         
         if (response.ok) {
-          generatedOtp = data.otp_code;
-          console.log("OTP from backend:", generatedOtp);
-          alert("OTP (test): " + generatedOtp);
+          alert(data.message || "OTP sent to your registered mobile number.");
           startTimer(30);
           otpStatus.style.display = "none";
           otpStatus.classList.remove("error");
@@ -96,17 +81,10 @@
     function checkOtp() {
       const entered = Array.from(otpInputs).map(input => input.value).join("");
       if (entered.length === 6) {
-        if (entered === generatedOtp) {
-          otpStatus.textContent = "OTP verified";
-          otpStatus.classList.remove("error");
-          otpStatus.style.display = "block";
-          loginBtn.disabled = false;
-        } else {
-          otpStatus.textContent = "Incorrect OTP. Please try again.";
-          otpStatus.classList.add("error");
-          otpStatus.style.display = "block";
-          loginBtn.disabled = true;
-        }
+        otpStatus.textContent = "OTP entered. Click Login to verify.";
+        otpStatus.classList.remove("error");
+        otpStatus.style.display = "block";
+        loginBtn.disabled = false;
       } else {
         otpStatus.style.display = "none";
         loginBtn.disabled = true;
@@ -114,11 +92,11 @@
     }
 
     loginBtn.addEventListener("click", async () => {
-      const aadhaar = aadhaarInput.value.trim();
+      const mobile = mobileInput.value.trim();
       const otp_code = Array.from(otpInputs).map(input => input.value).join("");
       
-      if (!aadhaar || otp_code.length !== 6) {
-        alert("Please enter valid Aadhaar and OTP.");
+      if (!mobile || mobile.length !== 10 || isNaN(mobile) || otp_code.length !== 6) {
+        alert("Please enter valid mobile number and OTP.");
         return;
       }
       
@@ -129,7 +107,7 @@
         const response = await fetch('/api/login/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aadhaar, otp_code })
+          body: JSON.stringify({ mobile, otp_code })
         });
         
         const data = await response.json();
@@ -143,6 +121,8 @@
           const role = data.voter.role;
           if (role === 'admin') {
             window.location.href = '/admin_panel/';
+          } else if (role === 'candidate') {
+            window.location.href = '/candidate_panel/';
           } else if (role === 'voter') {
             window.location.href = '/voter_panel/';
           } else {

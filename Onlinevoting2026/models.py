@@ -7,6 +7,7 @@ class Voter(models.Model):
     ROLE_CHOICES = [
         ('voter', 'Voter'),
         ('admin', 'Admin'),
+        ('candidate', 'Candidate'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -60,18 +61,26 @@ class Election(models.Model):
 
 
 class Candidate(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     election = models.ForeignKey(Election, on_delete=models.CASCADE, related_name='candidates')
+    voter = models.ForeignKey(Voter, on_delete=models.CASCADE, related_name='candidacies', null=True, blank=True)
     name = models.CharField(max_length=255)
     party = models.CharField(max_length=255, blank=True)
     symbol = models.ImageField(upload_to='party_symbols/', blank=True, null=True)
     description = models.TextField(blank=True)
+    manifesto = models.TextField(blank=True, help_text='Party manifesto text')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['name']
-        unique_together = ('election', 'name')
+        unique_together = ('election', 'voter')
 
     def __str__(self):
         return f"{self.name} - {self.election.title}"

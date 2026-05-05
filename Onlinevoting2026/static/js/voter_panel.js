@@ -1,12 +1,30 @@
 
-  const STORAGE_KEYS = { ELECTIONS: 'voting_elections', CANDIDATES: 'voting_candidates', VOTES: 'voting_votes', USERS: 'votingUsers' };
-  function getData(key) { const data = localStorage.getItem(key); return data ? JSON.parse(data) : []; }
-  function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+  const API = {
+    elections: '/api/elections/',
+    candidates: '/api/candidates/',
+    votes: '/api/votes/'
+  };
+
+  async function fetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (err) {
+      data = {};
+    }
+    if (!response.ok) {
+      throw new Error(data.error || data.detail || 'Request failed');
+    }
+    return data;
+  }
+
   let currentVoter = null;
   let currentElectionForVote = null;
   let selectedCandidateId = null;
   let allElections = [];
   let allCandidates = [];
+  let allVotes = [];
 
   function getCurrentVoter() { const user = sessionStorage.getItem('votingUser'); return user ? JSON.parse(user) : null; }
   
@@ -36,7 +54,9 @@
     return [];
   }
   
-  function hasVoted(electionId, voterAadhaar) { return getData(STORAGE_KEYS.VOTES).some(v => v.electionId === electionId && v.voterAadhaar === voterAadhaar); }
+  function hasVoted(electionId, voterAadhaar) {
+    return allVotes.some(v => v.election === electionId && v.voter_aadhaar === voterAadhaar);
+  }
   
   async function castVote(electionId, candidateId) {
     const voter = currentVoter;
@@ -44,7 +64,7 @@
     if (hasVoted(electionId, voter.aadhaar)) { alert("You have already voted in this election."); return false; }
     
     try {
-      const response = await fetch('/api/votes/', {
+      await fetchJson(API.votes, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -53,34 +73,22 @@
           voter_aadhaar: voter.aadhaar
         })
       });
-      
-      if (response.ok) {
-        const votes = getData(STORAGE_KEYS.VOTES);
-        votes.push({ id: Date.now().toString(), electionId, candidateId, voterAadhaar: voter.aadhaar, timestamp: new Date().toISOString() });
-        saveData(STORAGE_KEYS.VOTES, votes);
-        return true;
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to cast vote');
-        return false;
-      }
+      await refreshVotes();
+      return true;
     } catch (error) {
       alert('Error casting vote: ' + error.message);
       return false;
     }
   }
   
-  async function getElectionResults(electionId) {
+
+  async function refreshVotes() {
     try {
-      const response = await fetch(`/api/elections/${electionId}/results/`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.results;
-      }
+      allVotes = await fetchJson(API.votes);
     } catch (error) {
-      console.error('Error fetching results:', error);
+      console.error('Error fetching votes:', error);
+      allVotes = [];
     }
-    return [];
   }
 
   function ensureVoterSession() {
@@ -106,11 +114,11 @@
 
   async function renderDashboard() {
     const elections = await fetchElections();
-    const votes = getData(STORAGE_KEYS.VOTES);
+    await refreshVotes();
     const activeElections = elections.filter(e => e.status === 'active');
     const upcomingElections = elections.filter(e => e.status === 'upcoming');
     const completedElections = elections.filter(e => e.status === 'completed');
-    const userVotesCount = votes.filter(v => v.voterAadhaar === currentVoter.aadhaar).length;
+    const userVotesCount = allVotes.filter(v => v.voter_aadhaar === currentVoter.aadhaar).length;
     const recentElections = [...elections].sort((a,b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 3);
     const upcomingPreview = upcomingElections.slice(0, 3);
 
@@ -130,7 +138,7 @@
               <div class="upcoming-item">
                 <div>
                   <div class="upcoming-title">${e.title}</div>
-                  <div class="upcoming-date">Starts: ${e.start_date}</div>
+                  <div class="upcoming-date">Starts: ${new Date(e.start_date).toLocaleString()}</div>
                 </div>
                 <span class="status-badge">Upcoming</span>
               </div>
@@ -150,7 +158,7 @@
               <tr>
                 <td><i class="fas fa-poll"></i> ${e.title}</td>
                 <td><span class="status-badge">${e.status}</span></td>
-                <td>${e.start_date} → ${e.end_date}</td>
+                <td>${new Date(e.start_date).toLocaleString()} → ${new Date(e.end_date).toLocaleString()}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -182,7 +190,7 @@
           <div class="election-card">
             <div class="election-title">${election.title}</div>
             <div class="election-description">${election.description}</div>
-            <div class="election-dates"><i class="fas fa-calendar-alt"></i> ${election.startDate} → ${election.endDate}</div>
+            <div class="election-dates"><i class="fas fa-calendar-alt"></i> ${new Date(election.start_date).toLocaleString()} → ${new Date(election.end_date).toLocaleString()}</div>
             ${!voterHasVoted ? `<button class="vote-button" data-election-id="${election.id}" data-election-title="${election.title}" data-election-description="${election.description}">Let's Vote</button>` : `<div class="already-voted-badge"><i class="fas fa-check-circle"></i> You have already voted in this election</div>`}
           </div>
         `;
@@ -204,7 +212,7 @@
     currentElectionForVote = electionId;
     selectedCandidateId = null;
 
-    const candidates = getData(STORAGE_KEYS.CANDIDATES).filter(c => c.electionId === electionId);
+    const candidates = allCandidates.filter(c => c.election === electionId);
     const modalTitle = document.getElementById('modalTitle');
     modalTitle.innerHTML = `<i class="fas fa-vote-yea"></i> ${title}`;
     const modalCandidatesDiv = document.getElementById('modalCandidates');
@@ -213,10 +221,10 @@
       <div class="candidates-grid" id="candidatesGrid">
         ${candidates.map(c => `
           <div class="candidate-card" data-candidate-id="${c.id}">
-            ${c.partySymbolImageUrl ? `<img src="${c.partySymbolImageUrl}" class="candidate-img" alt="symbol">` : ''}
+            ${c.symbol ? `<img src="${c.symbol}" class="candidate-img" alt="symbol">` : ''}
             <div class="candidate-name">${c.name}</div>
             <div class="candidate-party">${c.party}</div>
-            <div class="candidate-bio">${c.bio || ''}</div>
+            <div class="candidate-bio">${c.description || ''}</div>
           </div>
         `).join('')}
       </div>
@@ -241,43 +249,38 @@
     selectedCandidateId = null;
   }
 
-  function confirmVote() {
+  async function confirmVote() {
     if (!selectedCandidateId) {
       alert('Please select a candidate to vote for.');
       return;
     }
     if (confirm('Are you sure you want to cast your vote for this candidate? This action cannot be undone.')) {
-      if (castVote(currentElectionForVote, selectedCandidateId)) {
+      if (await castVote(currentElectionForVote, selectedCandidateId)) {
         alert('Vote cast successfully!');
         closeVoteModal();
-        renderDashboard(); // refresh dashboard
+        await renderDashboard();
       } else {
         alert('Failed to cast vote. You may have already voted in this election.');
         closeVoteModal();
-        renderDashboard();
+        await renderDashboard();
       }
     }
   }
 
-  function renderUpcoming() {
-    const elections = getData(STORAGE_KEYS.ELECTIONS), upcoming = elections.filter(e => e.status === 'upcoming');
-    const html = `<div class="section"><div class="section-header"><h2>Upcoming Elections</h2></div>${upcoming.length === 0 ? '<p>No upcoming elections scheduled.</p>' : upcoming.map(e => `<div style="margin-bottom: 24px; border-left: 4px solid #2563eb; padding-left: 16px;"><h3>${e.title}</h3><p>${e.description}</p><p><strong>Start Date:</strong> ${e.startDate} | <strong>End Date:</strong> ${e.endDate}</p></div>`).join('')}</div>`;
+  async function renderUpcoming() {
+    const elections = await fetchElections();
+    const upcoming = elections.filter(e => e.status === 'upcoming');
+    const html = `<div class="section"><div class="section-header"><h2>Upcoming Elections</h2></div>${upcoming.length === 0 ? '<p>No upcoming elections scheduled.</p>' : upcoming.map(e => `<div style="margin-bottom: 24px; border-left: 4px solid #2563eb; padding-left: 16px;"><h3>${e.title}</h3><p>${e.description || ''}</p><p><strong>Start Date:</strong> ${new Date(e.start_date).toLocaleString()} | <strong>End Date:</strong> ${new Date(e.end_date).toLocaleString()}</p></div>`).join('')}</div>`;
     document.getElementById('dynamicContent').innerHTML = html;
   }
 
-  function renderResults() {
-    const elections = getData(STORAGE_KEYS.ELECTIONS), completed = elections.filter(e => e.status === 'completed');
-    const html = `<div class="section"><div class="section-header"><h2>Election Results</h2></div>${completed.length === 0 ? '<p>No completed elections yet.</p>' : completed.map(election => { const results = getElectionResults(election.id); const winner = results[0]; return `<div style="margin-bottom: 32px;"><h3>${election.title}</h3><p style="margin-bottom: 12px;">${election.description}</p><div class="candidates-grid">${results.map(c => `<div class="candidate-card">${c.partySymbolImageUrl ? `<img src="${c.partySymbolImageUrl}" class="candidate-img" alt="symbol">` : ''}<div class="candidate-name">${c.name}</div><div class="candidate-party">${c.party}</div><div><strong>Votes:</strong> ${c.voteCount}</div>${winner && winner.id === c.id ? '<div class="winner-badge"><i class="fas fa-trophy"></i> Winner</div>' : ''}</div>`).join('')}</div></div>`; }).join('')}</div>`;
-    document.getElementById('dynamicContent').innerHTML = html;
-  }
 
-  function loadSection(section) {
+  async function loadSection(section) {
     currentSection = section;
     document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.section === section));
-    if (section === 'dashboard') renderDashboard();
-    else if (section === 'active') renderDashboard(); // same as dashboard for now
-    else if (section === 'upcoming') renderUpcoming();
-    else if (section === 'results') renderResults();
+    if (section === 'dashboard') await renderDashboard();
+    else if (section === 'active') await renderDashboard();
+    else if (section === 'upcoming') await renderUpcoming();
   }
 
   document.addEventListener('DOMContentLoaded', () => {

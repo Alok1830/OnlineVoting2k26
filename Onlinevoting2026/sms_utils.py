@@ -26,12 +26,12 @@ def send_otp_sms(phone_number, otp_code):
             to=phone_number
         )
         
-        logger.info(f"✓ OTP sent successfully to {phone_number}. Message SID: {message.sid}, Status: {message.status}")
+        logger.info(f"OTP sent successfully to {phone_number}. Message SID: {message.sid}, Status: {message.status}")
         return True, message.sid
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"✗ Error sending OTP to {phone_number}: {error_msg}")
+        logger.error(f"Error sending OTP to {phone_number}: {error_msg}")
         
         # Log specific Twilio errors
         if "Invalid" in error_msg:
