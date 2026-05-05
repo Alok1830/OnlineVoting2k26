@@ -45,14 +45,30 @@ class VoterRegistrationSerializer(serializers.ModelSerializer):
 
 class CandidateSerializer(serializers.ModelSerializer):
     vote_count = serializers.SerializerMethodField()
+    symbol_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Candidate
-        fields = ['id', 'election', 'name', 'party', 'symbol', 'description', 'vote_count', 'created_at']
+        fields = ['id', 'election', 'voter', 'name', 'party', 'symbol', 'symbol_url', 'description', 'manifesto', 'status', 'vote_count', 'created_at']
         read_only_fields = ['id', 'created_at']
     
     def get_vote_count(self, obj):
         return obj.votes.count()
+
+    def get_symbol_url(self, obj):
+        if obj.symbol:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.symbol.url)
+            return obj.symbol.url
+        return None
+
+
+class CandidateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for candidates to update their own candidacy details."""
+    class Meta:
+        model = Candidate
+        fields = ['party', 'description', 'manifesto', 'symbol']
 
 
 class ElectionDetailSerializer(serializers.ModelSerializer):
@@ -79,10 +95,11 @@ class ElectionSerializer(serializers.ModelSerializer):
 class VoteSerializer(serializers.ModelSerializer):
     candidate_name = serializers.CharField(source='candidate.name', read_only=True)
     election_title = serializers.CharField(source='election.title', read_only=True)
+    voter_aadhaar = serializers.CharField(source='voter.aadhaar', read_only=True)
     
     class Meta:
         model = Vote
-        fields = ['id', 'election', 'candidate', 'candidate_name', 'election_title', 'timestamp']
+        fields = ['id', 'election', 'candidate', 'candidate_name', 'election_title', 'voter_aadhaar', 'timestamp']
         read_only_fields = ['id', 'timestamp']
 
     def create(self, validated_data):
@@ -90,6 +107,13 @@ class VoteSerializer(serializers.ModelSerializer):
         election = validated_data['election']
         candidate = validated_data['candidate']
         
+        # Check if the election is currently active and within time limits
+        now = timezone.now()
+        if election.status != 'active':
+            raise serializers.ValidationError("This election is not currently active.")
+        if not (election.start_date <= now <= election.end_date):
+            raise serializers.ValidationError("Voting is closed for this election. The current time is outside the election's start and end dates.")
+
         # Check if voter already voted in this election
         if Vote.objects.filter(election=election, voter=voter).exists():
             raise serializers.ValidationError("You have already voted in this election.")
@@ -110,7 +134,7 @@ class OTPSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTP
         fields = ['aadhaar', 'otp_code']
-        write_only_fields = ['otp_code']
+        read_only_fields = ['otp_code']
     
     def create(self, validated_data):
         aadhaar = validated_data['aadhaar']

@@ -4,20 +4,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Voter Dashboard - Online Voting System</title>
+  <title>Candidate Dashboard - Online Voting System</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/voter_panel.css' %}">
-
+  <link rel="stylesheet" href="{% static 'css/candidate_panel.css' %}">
 </head>
 <body>
-<div class="voter-container">
+<div class="candidate-container">
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-header"><h2><i class="fas fa-vote-yea"></i> VoteSys</h2><p>Voter Dashboard</p></div>
+    <div class="sidebar-header">
+      <h2><i class="fas fa-user-tie"></i> VoteSys</h2>
+      <p>Candidate Dashboard</p>
+    </div>
     <div class="nav-menu">
       <div class="nav-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></div>
-      <div class="nav-item" data-section="active"><i class="fas fa-check-circle"></i> <span>Active Elections</span></div>
-      <div class="nav-item" data-section="upcoming"><i class="fas fa-clock"></i> <span>Upcoming</span></div>
+      <div class="nav-item" data-section="candidacies"><i class="fas fa-id-badge"></i> <span>My Candidacies</span></div>
     </div>
     <div class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</div>
   </div>
@@ -27,30 +28,34 @@
       <div class="user-info">
         <div class="greeting">
           <div class="greeting-message" id="greetingMessage">Good day,</div>
-          <div class="voter-name" id="voterName">Voter</div>
+          <div class="candidate-name" id="candidateName">Candidate</div>
         </div>
         <a href="{% url 'profile' %}" class="profile-link">
           <i class="fas fa-user-edit"></i>
           <span>Profile</span>
         </a>
-        <img id="avatarImg" class="avatar" alt="Profile" src="https://ui-avatars.com/api/?background=2563eb&color=fff&rounded=true&bold=true&size=48">
+        <img id="avatarImg" class="avatar" alt="Profile" src="https://ui-avatars.com/api/?background=7c3aed&color=fff&rounded=true&bold=true&size=48">
       </div>
     </div>
     <div id="dynamicContent"></div>
   </div>
 </div>
 
-<!-- Voting Modal -->
-<div id="voteModal" class="modal">
+<!-- Edit Candidacy Modal -->
+<div id="editModal" class="modal">
   <div class="modal-content">
-    <h3 id="modalTitle">Vote in Election</h3>
-    <div id="modalCandidates"></div>
+    <div class="modal-header">
+      <h3 id="editModalTitle"><i class="fas fa-edit"></i> Edit Candidacy</h3>
+      <button class="modal-close" id="closeEditModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="editModalBody"></div>
     <div class="modal-buttons">
-      <button class="btn-secondary" id="closeModalBtn">Cancel</button>
-      <button class="btn-primary" id="confirmVoteBtn">Confirm Vote</button>
+      <button class="btn-secondary" id="editModalCancel">Cancel</button>
+      <button class="btn-primary" id="editModalSave"><i class="fas fa-save"></i> Save Changes</button>
     </div>
   </div>
 </div>
-<script src="{% static 'js/voter_panel.js' %}"></script>
+
+<script src="{% static 'js/candidate_panel.js' %}"></script>
 </body>
 </html>

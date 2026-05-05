@@ -15,7 +15,6 @@
   let currentUser = null;
 
   // OTP handling for mobile change
-  let generatedOtp = '';
   let otpTimerInterval = null;
   let otpVerified = false;
   let newMobileValue = '';
@@ -48,14 +47,14 @@
     // Display static info
     document.getElementById('aadhaarDisplay').innerText = currentUser.aadhaar;
     document.getElementById('roleDisplay').innerText = currentUser.role === 'admin' ? 'Administrator' : 'Voter';
-    document.getElementById('fullName').value = currentUser.fullName || '';
+    document.getElementById('fullName').value = currentUser.full_name || currentUser.fullName || '';
     document.getElementById('mobile').value = currentUser.mobile || '';
 
     // Profile picture preview
-    if (currentUser.profilePicture) {
-      avatarPreview.src = currentUser.profilePicture;
+    if (currentUser.profile_picture || currentUser.profilePicture) {
+      avatarPreview.src = currentUser.profile_picture || currentUser.profilePicture;
     } else {
-      const initials = encodeURIComponent(currentUser.fullName);
+      const initials = encodeURIComponent(currentUser.full_name || currentUser.fullName || 'User');
       avatarPreview.src = `https://ui-avatars.com/api/?background=2563eb&color=fff&rounded=true&bold=true&size=80&name=${initials}`;
     }
 
@@ -175,15 +174,6 @@
     document.getElementById('confirmPassword').value = '';
   }
 
-  // OTP generation and timer
-  function generateOtp() {
-    let otp = '';
-    for (let i = 0; i < 6; i++) otp += Math.floor(Math.random() * 10);
-    console.log('OTP for mobile change:', otp);
-    alert(`Demo OTP: ${otp}\n(This would be sent to your new mobile number in a real system.)`);
-    return otp;
-  }
-
   function startTimer(seconds) {
     let remaining = seconds;
     otpTimerSpan.textContent = `Resend OTP in ${remaining}s`;
@@ -203,7 +193,7 @@
   }
 
   // Send OTP for mobile change
-  sendOtpBtn.addEventListener('click', () => {
+  sendOtpBtn.addEventListener('click', async () => {
     const newMobile = document.getElementById('mobile').value.trim();
     if (!newMobile || newMobile.length !== 10 || isNaN(newMobile)) {
       alert('Please enter a valid 10-digit mobile number.');
@@ -214,15 +204,37 @@
       return;
     }
     newMobileValue = newMobile;
-    generatedOtp = generateOtp();
-    startTimer(30);
-    otpSection.style.display = 'block';
-    otpVerified = false;
-    otpStatusDiv.innerHTML = '';
-    otpStatusDiv.className = 'status-text';
-    // Clear OTP inputs
-    otpInputs.forEach(inp => inp.value = '');
-    otpInputs[0].focus();
+    sendOtpBtn.disabled = true;
+    sendOtpBtn.textContent = 'Sending...';
+
+    try {
+      const response = await fetch('/api/request-otp/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: currentUser.mobile })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to request OTP.');
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP';
+        return;
+      }
+
+      alert('OTP sent to your current registered mobile number.');
+      startTimer(30);
+      otpSection.style.display = 'block';
+      otpVerified = false;
+      otpStatusDiv.innerHTML = '';
+      otpStatusDiv.className = 'status-text';
+      otpInputs.forEach(inp => inp.value = '');
+      otpInputs[0].focus();
+    } catch (error) {
+      alert('Error requesting OTP: ' + error.message);
+      sendOtpBtn.disabled = false;
+      sendOtpBtn.textContent = 'Send OTP';
+    }
   });
 
   // OTP input handlers
@@ -241,15 +253,9 @@
   function checkOtp() {
     const entered = Array.from(otpInputs).map(i => i.value).join('');
     if (entered.length === 6) {
-      if (entered === generatedOtp) {
-        otpStatusDiv.innerHTML = 'OTP verified. You can now save your profile.';
-        otpStatusDiv.className = 'status-text success';
-        otpVerified = true;
-      } else {
-        otpStatusDiv.innerHTML = 'Incorrect OTP. Please try again.';
-        otpStatusDiv.className = 'status-text error';
-        otpVerified = false;
-      }
+      otpStatusDiv.innerHTML = 'OTP entered. Click Save to verify and update profile.';
+      otpStatusDiv.className = 'status-text success';
+      otpVerified = true;
     } else {
       otpStatusDiv.innerHTML = '';
       otpVerified = false;
@@ -273,30 +279,36 @@
     }
   });
 
-  updatePictureBtn.addEventListener('click', () => {
+  updatePictureBtn.addEventListener('click', async () => {
     if (!newProfilePicture) {
       alert('Please select a picture first.');
       return;
     }
-    // Update user in localStorage and session
-    const users = getUsers();
-    const userIndex = users.findIndex(u => u.aadhaar === currentUser.aadhaar);
-    if (userIndex === -1) {
-      alert('User not found.');
-      return;
+    try {
+      const response = await fetch(`/api/voters/${currentUser.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_picture: newProfilePicture })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || 'Failed to update picture.');
+        return;
+      }
+
+      currentUser = data;
+      sessionStorage.setItem('votingUser', JSON.stringify(currentUser));
+      alert('Profile picture updated successfully!');
+      document.getElementById('profilePicStatus').innerHTML = 'Picture saved!';
+      document.getElementById('profilePicStatus').className = 'status-text success';
+      newProfilePicture = null; // reset
+    } catch (error) {
+      alert('Failed to update picture: ' + error.message);
     }
-    users[userIndex].profilePicture = newProfilePicture;
-    saveUsers(users);
-    currentUser.profilePicture = newProfilePicture;
-    sessionStorage.setItem('votingUser', JSON.stringify(currentUser));
-    alert('Profile picture updated successfully!');
-    document.getElementById('profilePicStatus').innerHTML = 'Picture saved!';
-    document.getElementById('profilePicStatus').className = 'status-text success';
-    newProfilePicture = null; // reset
   });
 
   // Save profile changes (name, mobile)
-  document.getElementById('saveProfileBtn').addEventListener('click', () => {
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
     const newName = document.getElementById('fullName').value.trim();
     const newMobile = document.getElementById('mobile').value.trim();
     if (!newName) {
@@ -313,20 +325,43 @@
       return;
     }
 
-    // Update user data
-    const users = getUsers();
-    const userIndex = users.findIndex(u => u.aadhaar === currentUser.aadhaar);
-    if (userIndex === -1) {
-      alert('User not found.');
+    if (newMobile !== currentUser.mobile) {
+      const enteredOtp = Array.from(otpInputs).map(i => i.value).join('');
+      try {
+        const verifyResponse = await fetch('/api/login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: currentUser.mobile, otp_code: enteredOtp })
+        });
+        const verifyData = await verifyResponse.json();
+        if (!verifyResponse.ok) {
+          alert(verifyData.error || 'OTP verification failed.');
+          return;
+        }
+      } catch (error) {
+        alert('OTP verification error: ' + error.message);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/voters/${currentUser.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: newName, mobile: newMobile })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || data.mobile?.[0] || 'Failed to update profile.');
+        return;
+      }
+
+      currentUser = data;
+      sessionStorage.setItem('votingUser', JSON.stringify(currentUser));
+    } catch (error) {
+      alert('Failed to update profile: ' + error.message);
       return;
     }
-    users[userIndex].fullName = newName;
-    users[userIndex].mobile = newMobile;
-    saveUsers(users);
-    // Update session
-    currentUser.fullName = newName;
-    currentUser.mobile = newMobile;
-    sessionStorage.setItem('votingUser', JSON.stringify(currentUser));
 
     alert('Profile updated successfully!');
     // Reset OTP section for next change
@@ -338,7 +373,7 @@
     sendOtpBtn.textContent = 'Send OTP';
     if (otpTimerInterval) clearInterval(otpTimerInterval);
     // Refresh avatar if initials changed (but we keep picture)
-    if (!currentUser.profilePicture) {
+    if (!(currentUser.profile_picture || currentUser.profilePicture)) {
       const initials = encodeURIComponent(newName);
       avatarPreview.src = `https://ui-avatars.com/api/?background=2563eb&color=fff&rounded=true&bold=true&size=80&name=${initials}`;
     }

@@ -1,0 +1,265 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Login | OVS-SRGI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    body::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 40%, rgba(59,130,246,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 60%, rgba(139,92,246,0.06) 0%, transparent 50%);
+      animation: bgPulse 8s ease-in-out infinite;
+    }
+    @keyframes bgPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .login-card {
+      position: relative;
+      z-index: 1;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 20px;
+      padding: 40px 36px 32px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 80px rgba(59,130,246,0.05);
+    }
+    .login-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(59,130,246,0.3);
+    }
+    h2 {
+      text-align: center;
+      color: #f1f5f9;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      font-size: 16px;
+      transition: color 0.2s;
+    }
+    .input-wrapper input {
+      width: 100%;
+      padding: 12px 14px 12px 44px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      color: #f1f5f9;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-wrapper input::placeholder { color: #475569; }
+    .input-wrapper input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    .input-wrapper input:focus + i,
+    .input-wrapper input:focus ~ i { color: #3b82f6; }
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+      margin-top: 6px;
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+    }
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(37, 99, 235, 0.4);
+    }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.6; cursor: default; }
+    .error-msg {
+      display: none;
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.25);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fca5a5;
+      font-size: 13px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .error-msg.show { display: block; }
+    .footer-links {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .footer-links a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: #60a5fa; text-decoration: underline; }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 16px 0;
+      color: #475569;
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(148,163,184,0.15);
+    }
+    .divider span { padding: 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-icon"><i class="fas fa-shield-alt"></i></div>
+    <h2>Admin Login</h2>
+    <p class="subtitle">Sign in with your admin credentials</p>
+
+    <div id="errorMsg" class="error-msg"></div>
+
+    <form id="adminLoginForm" autocomplete="on">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div class="input-wrapper">
+          <input type="text" id="username" name="username" placeholder="Enter admin username" autocomplete="username" required />
+          <i class="fas fa-user"></i>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <input type="password" id="password" name="password" placeholder="Enter password" autocomplete="current-password" required />
+          <i class="fas fa-lock"></i>
+        </div>
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+    </form>
+
+    <div class="divider"><span>or</span></div>
+
+    <div class="footer-links">
+      <a href="{% url 'login' %}"><i class="fas fa-mobile-alt"></i> Voter OTP Login</a>
+      &nbsp;·&nbsp;
+      <a href="{% url 'landing_page' %}"><i class="fas fa-home"></i> Home</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('adminLoginForm');
+    const errorMsg = document.getElementById('errorMsg');
+    const loginBtn = document.getElementById('loginBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showError('Please enter both username and password.');
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+      errorMsg.classList.remove('show');
+
+      try {
+        const response = await fetch('/api/admin-login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          sessionStorage.setItem('votingToken', data.token);
+          sessionStorage.setItem('votingUser', JSON.stringify(data.voter));
+          window.location.href = '/admin_panel/';
+        } else {
+          showError(data.error || 'Login failed. Please try again.');
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+        }
+      } catch (err) {
+        showError('Network error. Please check your connection.');
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+      }
+    });
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('show');
+    }
+  </script>
+</body>
+</html>
